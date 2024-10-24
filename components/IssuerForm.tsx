@@ -1,13 +1,7 @@
-import { useState } from "react";
-// import { SdJwtIssuer } from "../../sd-jwt/pkg/sdjwt_bg";
-// import * as wasm from "../../sd-jwt/pkg/sdjwt_bg";
-// import { SdJwtIssuer } from "../pkg";
-// import("../../sd-jwt/pkg/sdjwt").then((module) => {
-//   let sdjwt = new module.SdJwtIssuer("test", "test");
-//   let encoded = sdjwt.encode();
-// });
-import * as wasm from "sdjwt";
+"use client";
 
+import { useState } from "react";
+import * as wasm from "sdjwt";
 interface IssuerFormProps {
   setSdJwt: (sdJwt: string) => void;
 }
@@ -91,12 +85,12 @@ const IssuerForm: React.FC<IssuerFormProps> = ({ setSdJwt }) => {
       <textarea
         value={publicKey}
         onChange={(e) => setPublicKey(e.target.value)}
-        placeholder="Holder Public Key (PEM format)"
+        placeholder="Issuer Public Key (PEM format)"
         className="w-full mt-4 p-2 border border-gray-300 rounded h-28"
       />
       <button
         onClick={handleConstructJwt}
-        className="mt-4 bg-black text-white py-2 px-4 rounded hover:bg-blue-700"
+        className="mt-4 bg-black text-white py-2 px-4 rounded hover:bg-purple-700"
       >
         Issue SD-JWT
       </button>

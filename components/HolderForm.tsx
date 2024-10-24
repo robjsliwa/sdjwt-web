@@ -1,50 +1,22 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import * as wasm from "sdjwt"; // Ensure this points to the correct module
+import Tooltip from "./Tooltip";
+import ColorCodedSdJwt from "./ColorCodedSdJwt";
 
 interface HolderFormProps {
   sdJwt: string;
   setHolderSdJwt: (sdJwt: string) => void;
 }
 
-const Tooltip: React.FC<{ value: string; children: React.ReactNode }> = ({
-  value,
-  children,
-}) => {
-  const [visible, setVisible] = useState(false);
-
-  return (
-    <span
-      onMouseEnter={() => setVisible(true)}
-      onMouseLeave={() => setVisible(false)}
-      style={{ position: "relative", cursor: "help" }}
-    >
-      {children}
-      {visible && (
-        <div
-          style={{
-            position: "absolute",
-            background: "#333",
-            color: "#fff",
-            padding: "5px",
-            borderRadius: "3px",
-            whiteSpace: "nowrap",
-            top: "-1.5em",
-            left: "0",
-            zIndex: 10,
-          }}
-        >
-          {value}
-        </div>
-      )}
-    </span>
-  );
-};
-
 const HolderForm: React.FC<HolderFormProps> = ({ sdJwt, setHolderSdJwt }) => {
   const [holderPrivateKey, setHolderPrivateKey] = useState<string>("");
   const [issuerPublicKey, setIssuerPublicKey] = useState<string>("");
   const [verified, setVerified] = useState<boolean>(false);
   const [decodedJwt, setDecodedJwt] = useState<any>(null);
+  const [digests, setDigests] = useState<string[]>([]);
+  const [redactedDigests, setRedactedDigests] = useState<boolean[]>([]);
 
   useEffect(() => {
     if (sdJwt) {
@@ -54,12 +26,33 @@ const HolderForm: React.FC<HolderFormProps> = ({ sdJwt, setHolderSdJwt }) => {
           const header = JSON.parse(atob(parts[0]));
           const payload = JSON.parse(atob(parts[1]));
           const signature = parts[2];
+          const digestParts = sdJwt
+            .split("~")
+            .slice(1)
+            .filter((digest) => digest.trim() !== "");
+          setDigests(digestParts);
+          setRedactedDigests(new Array(digestParts.length).fill(false));
           setDecodedJwt({ header, payload, signature });
         }
       };
       decodeJwt(sdJwt);
     }
   }, [sdJwt]);
+
+  const decodeBase64 = (digest: string) => {
+    try {
+      return atob(digest);
+    } catch (error) {
+      console.error("Error decoding digest:", error);
+      return "Invalid Base64";
+    }
+  };
+
+  const toggleRedact = (index: number) => {
+    const newRedactedDigests = [...redactedDigests];
+    newRedactedDigests[index] = !newRedactedDigests[index];
+    setRedactedDigests(newRedactedDigests);
+  };
 
   const renderJson = (jsonObject: any, indentLevel: number = 0) => {
     const indentStyle = { paddingLeft: `${indentLevel * 20}px` }; // Set indent level
@@ -121,15 +114,11 @@ const HolderForm: React.FC<HolderFormProps> = ({ sdJwt, setHolderSdJwt }) => {
     <div className="bg-white shadow-lg rounded-lg p-8">
       <h2 className="text-2xl mb-4">Holder Panel</h2>
 
-      <textarea
-        value={sdJwt}
-        readOnly
-        className="w-full h-80 p-2 border border-gray-300 rounded bg-gray-100 mb-4"
-      />
+      <ColorCodedSdJwt sdJwt={sdJwt} />
 
       {decodedJwt && (
         <div className="bg-gray-100 p-4 rounded-lg mb-4">
-          <h3 className="text-xl font-bold mb-2">Decoded SD-JWT</h3>
+          <h3 className="text-l font-bold mb-2">Decoded Issuer's SD-JWT</h3>
           <div className="overflow-x-auto break-words">
             <pre className="whitespace-pre-wrap">
               <code className="text-red-500">
@@ -139,14 +128,49 @@ const HolderForm: React.FC<HolderFormProps> = ({ sdJwt, setHolderSdJwt }) => {
               <code className="text-green-500">
                 {renderJson(decodedJwt.payload)}
               </code>
-              <br />
-              <code className="text-blue-500">
-                Signature: {decodedJwt.signature}
-              </code>
             </pre>
           </div>
         </div>
       )}
+
+      <div className="bg-gray-100 p-4 rounded-lg mb-4">
+        <h3 className="text-l font-bold mb-2">Digests</h3>
+        {digests.map((digest, index) => (
+          <div
+            key={index}
+            className={`p-2 border-b border-gray-300 flex items-start justify-between ${
+              redactedDigests[index] ? "opacity-50" : ""
+            }`}
+          >
+            <div className="flex-1 mr-4">
+              {/* Base64 Encoded Digest */}
+              <div className="text-sm text-gray-600 break-all">
+                <strong>Base64:</strong> {digest || "N/A"}
+              </div>
+
+              {/* Decoded Digest */}
+              <div className="text-sm text-gray-800 break-all">
+                <strong>Decoded:</strong> {decodeBase64(digest) || "N/A"}
+              </div>
+            </div>
+
+            {/* Redact Toggle Slider */}
+            <div className="ml-4 w-24">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={redactedDigests[index]}
+                  onChange={() => toggleRedact(index)}
+                  className="toggle-checkbox"
+                />
+                <span className="ml-2 text-sm">
+                  {redactedDigests[index] ? "Redacted" : "Redact"}
+                </span>
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <textarea
         value={issuerPublicKey}
