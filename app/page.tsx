@@ -6,8 +6,8 @@ import VerifierForm from "../components/VerifierForm";
 import { useState } from "react";
 
 export default function Home() {
-  const [sdJwt, setSdJwt] = useState<string>(""); // For passing SD-JWT between Issuer and Holder
-  const [holderSdJwt, setHolderSdJwt] = useState<string>(""); // SD-JWT signed by Holder
+  const [sdJwt, setSdJwt] = useState<string>("");
+  const [holderSdJwt, setHolderSdJwt] = useState<string>("");
   // const [wasm, setWasm] = useState(null);
 
   // useEffect(() => {

@@ -1,53 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, use } from "react";
 import * as wasm from "sdjwt";
+import { generateRSAPSSKeyPair } from "../utils";
+
 interface IssuerFormProps {
   setSdJwt: (sdJwt: string) => void;
 }
 
-const private_key = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCU72wNWzLQool2
-+VviuF4rKaCFJurXyMKY2CDOY3WP+99cEG9rTvDRBQq6bnkb3bUDmz+hncVHLJiP
-+eQqOLMVNuJ0dEMrbkQ8gbEviB4TScmlpqDbQ+qJTx+3cqMTnX99StTJ4yTTaVdP
-nId6rNOo3qwngl/DXuvCoQ1mregh1KQe8PaFsmlxmQ2SrPE/qnw0q6eM0CSRsEIg
-p0zOU8tFgnaNbcQ3LXgpz1+cku7WzJV8S90Fxw1IKPRR/8xzeGtyzSRyKpVlNje6
-8GlCg8bBnrpQnmb02MRrQi28Jdarh07rDhlRkU1WT71EL/tS6EvtNYXdD76sBCVJ
-TmXhlnyVAgMBAAECggEAAxAb2152LUV0D3oejwtJn7IFQ7FcM3N4HqdhoInGsvjA
-5czOVDLVNjpxt3A3YppTQBXv36wCxAb0kEMMYGeDT1SUoN58CMDSYggsxuFFKEWX
-m9keBirGADlPWd95ErMys9BXj46LUfAg3cATWgBQTgqRfpjqZtzLez8Cq1gfDDfV
-eMINKyxJHFABSSAX1NAfcJm/2vuBYN2oNNv+JdI1qlgL2onHFQmuOQl+H1SX2JEl
-IY7H1ATA39PRg8dTSYBo42qQ8jDmvVzgLVXOaOtWZJvZL8RalZVkqAPY8NncxyGF
-NlmzqfMCta6MCuxydB91ZXpAwuZnKuUz5CMPA9a4FQKBgQDGLlybTFckhXFZ0VXg
-fEn51quOMkvlMrRgd8F4JMI79+pq0KHaSM0EpCjOv3NqAectGQmbMQB8LuISreso
-ZuRyg2ScJSowbDu379ku/wOZpm5vSmBsfzHWas2jT1x4/6PYGnNMQKv1IkD9K4Eg
-0ewejTv4avU+ZZW30HMmV0iHJwKBgQDAYwNyWp+hprD9lC02DA5yDAZRgzWBltt2
-0NxyRXDV+CNZAfdn7xFPo6OcSzCeLVVglKjnJ4RCqFJJ6wjGsFz3ymXXql3bjvOY
-yYlQxEBfkHMAJb7N6We/lD8GNWZTffFNbsOsWUla9XsbI8vhbF/VrFIrtkKt6vZZ
-xJNiZQNT4wKBgQDAAlsm+6fScpeH9hHGFaV2sk40zvZJcf7hGCYSSUsG3wP3yXuH
-CdHZFVOUPFmN85oPT5rHCYr2xlWy015rHoVnjXYE8t0VXUfexjseFWVfkKiemukh
-NXsLyx7BgzqM4OHVloru7hmsvytIHsZVDg4+64eW/8nsUm/kT8nA9AAJMQKBgEBA
-EQOczlkPMWbOmLbHGf/ukiGg3zqzJgItSKIFHOTopO1x4a1dQvvE27wzxD3fR/ck
-TrA8G0ijrC+xhdHNTo8WkiKPbB8KQ8JP9EL797+ynyV6dZmRDKwHl3C8XrsdgXvp
-tQGXJA9zkjSDJPDY37ydeyfMC8LHiJR8OPiQYacfAoGBAKu0smpwESWQ1NrRMji0
-OUVLYDPyQqybgdYS6PAQiJYpKCCDNofCO676XqYC35ss4RweabgTL7VLsEL5Xz1x
-pt/agClszuk33DxAk7uqRgbZzVo5PBMhxA1AA9Xc9aho4f8tavTZWf9ARjncmYZd
-g/81VtrJi19YiFd+h0JnATsq
------END PRIVATE KEY-----`;
+const alg2sha_mapping: { [key: string]: string } = {
+  RS256: "SHA-256",
+  RS384: "SHA-384",
+  RS512: "SHA-512",
+  PS256: "SHA-256",
+  PS384: "SHA-384",
+  PS512: "SHA-512",
+  ES256: "SHA-256",
+  ES384: "SHA-384",
+  ES512: "SHA-512",
+};
+
+const sampleSDClaims = `sub: user_42
+!sd given_name: John
+!sd family_name: Doe
+email: johndoe@example.com
+phone_number: +1-555-123-1234
+phone_number_verified: true
+address:
+    !sd street_address: 123 Main St
+    !sd locality: Anytown
+    region: Anystate
+    country: US
+birthdate: 1940-01-01
+updated_at: 1570000000
+nationalities:
+    - !sd US
+    - !sd PL`;
 
 const IssuerForm: React.FC<IssuerFormProps> = ({ setSdJwt }) => {
-  const [yamlData, setYamlData] = useState<string>("");
+  const [yamlData, setYamlData] = useState<string>(sampleSDClaims);
   const [privateKey, setPrivateKey] = useState<string>("");
   const [publicKey, setPublicKey] = useState<string>("");
   const [algorithm, setAlgorithm] = useState<string>("RS256");
+  const [yamlError, setYamlError] = useState<boolean>(false);
+  const [keyError, setKeyError] = useState<boolean>(false);
+  const [keyBinding, setKeyBinding] = useState<boolean>(false);
 
-  const handleConstructJwt = async () => {
-    console.log("SdJwtIssuer", wasm.SdJwtIssuer);
-    const issuer = new wasm.SdJwtIssuer(yamlData, private_key);
-    const jwt = issuer.encode();
-    setSdJwt(jwt);
-    console.log(jwt);
-  };
+  useEffect(() => {
+    const shaName = alg2sha_mapping[algorithm];
+    if (
+      algorithm === "ES256" ||
+      algorithm === "ES384" ||
+      algorithm === "ES512"
+    ) {
+      // TODO
+    } else {
+      generateRSAPSSKeyPair(shaName).then(({ publicKey, privateKey }) => {
+        setPublicKey(publicKey);
+        setPrivateKey(privateKey);
+      });
+    }
+  }, [algorithm]);
+
+  useEffect(() => {
+    if (privateKey && yamlData) {
+      const issuer = new wasm.SdJwtIssuer();
+      try {
+        const jwt = issuer.encode(yamlData, privateKey);
+        setSdJwt(jwt);
+        setYamlError(false);
+        setKeyError(false);
+      } catch (error) {
+        if (String(error).includes("YAML parsing error")) {
+          setSdJwt("");
+          setYamlError(true);
+          setKeyError(false);
+        } else if (String(error).includes("encoding key")) {
+          setSdJwt("");
+          setKeyError(true);
+          setYamlError(false);
+        } else {
+          console.error("Error encoding JWT:", error);
+        }
+      }
+    }
+  }, [yamlData, privateKey]);
 
   return (
     <div className="bg-white shadow-lg rounded-lg p-8">
@@ -73,14 +110,18 @@ const IssuerForm: React.FC<IssuerFormProps> = ({ setSdJwt }) => {
       <textarea
         value={yamlData}
         onChange={(e) => setYamlData(e.target.value)}
-        placeholder="Enter YAML Claims"
-        className="w-full h-80 p-2 border border-gray-300 rounded"
+        placeholder={sampleSDClaims}
+        className={`w-full h-80 p-2 border ${
+          yamlError ? "text-red-500" : ""
+        } rounded`}
       />
       <textarea
         value={privateKey}
         onChange={(e) => setPrivateKey(e.target.value)}
         placeholder="Issuer Private Key (PEM format)"
-        className="w-full mt-4 p-2 border border-gray-300 rounded h-28"
+        className={`w-full mt-4 p-2 border ${
+          keyError ? "text-red-500" : ""
+        } rounded h-28`}
       />
       <textarea
         value={publicKey}
@@ -88,12 +129,16 @@ const IssuerForm: React.FC<IssuerFormProps> = ({ setSdJwt }) => {
         placeholder="Issuer Public Key (PEM format)"
         className="w-full mt-4 p-2 border border-gray-300 rounded h-28"
       />
-      <button
-        onClick={handleConstructJwt}
-        className="mt-4 bg-black text-white py-2 px-4 rounded hover:bg-purple-700"
-      >
-        Issue SD-JWT
-      </button>
+
+      <label className="flex items-center mt-4">
+        <input
+          type="checkbox"
+          checked={keyBinding}
+          onChange={() => setKeyBinding(!keyBinding)}
+          className="mr-2"
+        />
+        <span>Require Key Binding (Holder's Public Key)</span>
+      </label>
     </div>
   );
 };

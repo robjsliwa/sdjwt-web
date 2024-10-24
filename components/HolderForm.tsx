@@ -36,6 +36,10 @@ const HolderForm: React.FC<HolderFormProps> = ({ sdJwt, setHolderSdJwt }) => {
         }
       };
       decodeJwt(sdJwt);
+    } else {
+      setDecodedJwt(null);
+      setDigests([]);
+      setRedactedDigests([]);
     }
   }, [sdJwt]);
 
