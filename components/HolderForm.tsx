@@ -1,29 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import * as wasm from "sdjwt"; // Ensure this points to the correct module
+import * as wasm from "sdjwt";
 import Tooltip from "./Tooltip";
 import ColorCodedSdJwt from "./ColorCodedSdJwt";
 
 interface HolderFormProps {
   sdJwt: string;
+  issuerPublicKey: string;
   setHolderSdJwt: (sdJwt: string) => void;
 }
 
-const HolderForm: React.FC<HolderFormProps> = ({ sdJwt, setHolderSdJwt }) => {
+const HolderForm: React.FC<HolderFormProps> = ({
+  sdJwt,
+  issuerPublicKey,
+  setHolderSdJwt,
+}) => {
   const [holderPrivateKey, setHolderPrivateKey] = useState<string>("");
-  const [issuerPublicKey, setIssuerPublicKey] = useState<string>("");
+  const [holderPublicKey, setHolderPublicKey] = useState<string>("");
   const [verified, setVerified] = useState<boolean>(false);
   const [decodedJwt, setDecodedJwt] = useState<any>(null);
   const [digests, setDigests] = useState<string[]>([]);
   const [redactedDigests, setRedactedDigests] = useState<boolean[]>([]);
 
   useEffect(() => {
-    if (sdJwt) {
+    if (sdJwt && issuerPublicKey) {
+      let alg = "";
       const decodeJwt = (jwt: string) => {
         const parts = jwt.split(".");
         if (parts.length === 3) {
           const header = JSON.parse(atob(parts[0]));
+          alg = header.alg;
           const payload = JSON.parse(atob(parts[1]));
           const signature = parts[2];
           const digestParts = sdJwt
@@ -36,12 +43,13 @@ const HolderForm: React.FC<HolderFormProps> = ({ sdJwt, setHolderSdJwt }) => {
         }
       };
       decodeJwt(sdJwt);
+      verifyIssuerSignature(alg);
     } else {
       setDecodedJwt(null);
       setDigests([]);
       setRedactedDigests([]);
     }
-  }, [sdJwt]);
+  }, [sdJwt, issuerPublicKey]);
 
   const decodeBase64 = (digest: string) => {
     try {
@@ -105,18 +113,30 @@ const HolderForm: React.FC<HolderFormProps> = ({ sdJwt, setHolderSdJwt }) => {
     }
   };
 
-  const handleVerify = async () => {
-    // try {
-    //   const isValid = await wasm.verify_sd_jwt(sdJwt, issuerPublicKey); // WASM verification logic
-    //   setVerified(isValid);
-    // } catch (error) {
-    //   console.error("Verification error:", error);
-    // }
+  const verifyIssuerSignature = (alg: string) => {
+    let holderJwt = new wasm.SdJwtHolder();
+    try {
+      console.log("issuing public key", issuerPublicKey);
+      console.log("detected algorithm", alg);
+      console.log("sdJwt", sdJwt);
+      const result = holderJwt.verify(sdJwt, issuerPublicKey, alg);
+      console.log("Verification result:", result);
+      setVerified(result);
+    } catch (error) {
+      console.error("Verification error:", error);
+      setVerified(false);
+    }
   };
 
   return (
     <div className="bg-white shadow-lg rounded-lg p-8">
       <h2 className="text-2xl mb-4">Holder Panel</h2>
+
+      {verified && (
+        <div className="mt-4 text-green-600">
+          <p>Signature Verified</p>
+        </div>
+      )}
 
       <ColorCodedSdJwt sdJwt={sdJwt} />
 
@@ -177,35 +197,18 @@ const HolderForm: React.FC<HolderFormProps> = ({ sdJwt, setHolderSdJwt }) => {
       </div>
 
       <textarea
-        value={issuerPublicKey}
-        onChange={(e) => setIssuerPublicKey(e.target.value)}
-        placeholder="Issuer Public Key (PEM format)"
-        className="w-full mt-4 p-2 border border-gray-300 rounded h-24"
-      />
-      <button
-        onClick={handleVerify}
-        className="mt-4 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700"
-      >
-        Verify SD-JWT
-      </button>
-      {verified && (
-        <div className="mt-4 text-green-600">
-          <p>SD-JWT Verified Successfully!</p>
-        </div>
-      )}
-
-      <textarea
         value={holderPrivateKey}
         onChange={(e) => setHolderPrivateKey(e.target.value)}
         placeholder="Holder Private Key (PEM format)"
         className="w-full mt-4 p-2 border border-gray-300 rounded h-24"
       />
-      <button
-        onClick={() => setHolderSdJwt("")}
-        className="mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
-      >
-        Re-sign SD-JWT
-      </button>
+
+      <textarea
+        value={holderPublicKey}
+        onChange={(e) => setHolderPublicKey(e.target.value)}
+        placeholder="Issuer Public Key (PEM format)"
+        className="w-full mt-4 p-2 border border-gray-300 rounded h-24"
+      />
     </div>
   );
 };

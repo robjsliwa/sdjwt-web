@@ -6,6 +6,7 @@ import { generateRSAPSSKeyPair } from "../utils";
 
 interface IssuerFormProps {
   setSdJwt: (sdJwt: string) => void;
+  setIssuerPublicKey: (publicKey: string) => void;
 }
 
 const alg2sha_mapping: { [key: string]: string } = {
@@ -37,7 +38,10 @@ nationalities:
     - !sd US
     - !sd PL`;
 
-const IssuerForm: React.FC<IssuerFormProps> = ({ setSdJwt }) => {
+const IssuerForm: React.FC<IssuerFormProps> = ({
+  setSdJwt,
+  setIssuerPublicKey,
+}) => {
   const [yamlData, setYamlData] = useState<string>(sampleSDClaims);
   const [privateKey, setPrivateKey] = useState<string>("");
   const [publicKey, setPublicKey] = useState<string>("");
@@ -58,6 +62,7 @@ const IssuerForm: React.FC<IssuerFormProps> = ({ setSdJwt }) => {
       generateRSAPSSKeyPair(shaName).then(({ publicKey, privateKey }) => {
         setPublicKey(publicKey);
         setPrivateKey(privateKey);
+        setIssuerPublicKey(publicKey);
       });
     }
   }, [algorithm]);
@@ -66,7 +71,7 @@ const IssuerForm: React.FC<IssuerFormProps> = ({ setSdJwt }) => {
     if (privateKey && yamlData) {
       const issuer = new wasm.SdJwtIssuer();
       try {
-        const jwt = issuer.encode(yamlData, privateKey);
+        const jwt = issuer.encode(yamlData, privateKey, algorithm);
         setSdJwt(jwt);
         setYamlError(false);
         setKeyError(false);
