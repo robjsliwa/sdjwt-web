@@ -19,6 +19,24 @@ export async function generateRSAPSSKeyPair(hashName: string): Promise<{
   return { publicKey, privateKey };
 }
 
+export async function generateECDSAKeyPair(
+  curveName: string
+): Promise<{ publicKey: string; privateKey: string }> {
+  const keyPair = await window.crypto.subtle.generateKey(
+    {
+      name: "ECDSA",
+      namedCurve: curveName,
+    },
+    true,
+    ["sign", "verify"]
+  );
+
+  const publicKey = await exportKeyToPEM(keyPair.publicKey, "public");
+  const privateKey = await exportKeyToPEM(keyPair.privateKey, "private");
+
+  return { publicKey, privateKey };
+}
+
 async function exportKeyToPEM(
   key: CryptoKey,
   type: "public" | "private"

@@ -9,6 +9,7 @@ export default function Home() {
   const [sdJwt, setSdJwt] = useState<string>("");
   const [holderSdJwt, setHolderSdJwt] = useState<string>("");
   const [issuerPublicKey, setIssuerPublicKey] = useState<string>("");
+  const [kbKey, setKbKey] = useState<string>("");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,11 +22,13 @@ export default function Home() {
           <IssuerForm
             setSdJwt={setSdJwt}
             setIssuerPublicKey={setIssuerPublicKey}
+            kbKey={kbKey}
           />
           <HolderForm
             sdJwt={sdJwt}
             issuerPublicKey={issuerPublicKey}
             setHolderSdJwt={setHolderSdJwt}
+            setKbKey={setKbKey}
           />
           <VerifierForm holderSdJwt={holderSdJwt} />
         </div>

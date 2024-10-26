@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ColorCodedSdJwt from "./ColorCodedSdJwt";
 
 interface VerifierFormProps {
   holderSdJwt: string;
@@ -20,24 +21,7 @@ const VerifierForm: React.FC<VerifierFormProps> = ({ holderSdJwt }) => {
   return (
     <div className="bg-white shadow-lg rounded-lg p-8">
       <h2 className="text-2xl mb-4">Verifier Panel</h2>
-      <textarea
-        value={holderSdJwt}
-        readOnly
-        className="w-full h-32 p-2 border border-gray-300 rounded bg-gray-100"
-      />
-      <input
-        type="text"
-        value={issuerPublicKey}
-        onChange={(e) => setIssuerPublicKey(e.target.value)}
-        placeholder="Issuer Public Key (PEM format)"
-        className="w-full mt-4 p-2 border border-gray-300 rounded"
-      />
-      <button
-        onClick={handleVerify}
-        className="mt-4 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700"
-      >
-        Verify SD-JWT
-      </button>
+      <ColorCodedSdJwt sdJwt={holderSdJwt} />
 
       {decodedSdJwt && (
         <pre className="mt-4 bg-gray-100 p-4 rounded">

@@ -2,23 +2,24 @@
 
 import { useState, useEffect, use } from "react";
 import * as wasm from "sdjwt";
-import { generateRSAPSSKeyPair } from "../utils";
+import { generateRSAPSSKeyPair, generateECDSAKeyPair } from "../utils";
 
 interface IssuerFormProps {
   setSdJwt: (sdJwt: string) => void;
   setIssuerPublicKey: (publicKey: string) => void;
+  kbKey: string;
 }
 
-const alg2sha_mapping: { [key: string]: string } = {
+const alg2sha_curve_mapping: { [key: string]: string } = {
   RS256: "SHA-256",
   RS384: "SHA-384",
   RS512: "SHA-512",
   PS256: "SHA-256",
   PS384: "SHA-384",
   PS512: "SHA-512",
-  ES256: "SHA-256",
-  ES384: "SHA-384",
-  ES512: "SHA-512",
+  ES256: "P-256",
+  ES384: "P-384",
+  ES512: "P-512",
 };
 
 const sampleSDClaims = `sub: user_42
@@ -41,6 +42,7 @@ nationalities:
 const IssuerForm: React.FC<IssuerFormProps> = ({
   setSdJwt,
   setIssuerPublicKey,
+  kbKey,
 }) => {
   const [yamlData, setYamlData] = useState<string>(sampleSDClaims);
   const [privateKey, setPrivateKey] = useState<string>("");
@@ -51,15 +53,27 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
   const [keyBinding, setKeyBinding] = useState<boolean>(false);
 
   useEffect(() => {
-    const shaName = alg2sha_mapping[algorithm];
+    const shaCurveName = alg2sha_curve_mapping[algorithm];
     if (
       algorithm === "ES256" ||
       algorithm === "ES384" ||
       algorithm === "ES512"
     ) {
-      // TODO
+      generateECDSAKeyPair(shaCurveName).then(
+        ({
+          publicKey,
+          privateKey,
+        }: {
+          publicKey: string;
+          privateKey: string;
+        }) => {
+          setPublicKey(publicKey);
+          setPrivateKey(privateKey);
+          setIssuerPublicKey(publicKey);
+        }
+      );
     } else {
-      generateRSAPSSKeyPair(shaName).then(({ publicKey, privateKey }) => {
+      generateRSAPSSKeyPair(shaCurveName).then(({ publicKey, privateKey }) => {
         setPublicKey(publicKey);
         setPrivateKey(privateKey);
         setIssuerPublicKey(publicKey);
@@ -91,6 +105,10 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
     }
   }, [yamlData, privateKey]);
 
+  useEffect(() => {
+    setIssuerPublicKey(publicKey);
+  }, [publicKey]);
+
   return (
     <div className="bg-white shadow-lg rounded-lg p-8">
       <h2 className="text-2xl mb-4">Issuer Panel</h2>
@@ -108,9 +126,9 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
         <option value="PS256">PS256</option>
         <option value="PS384">PS384</option>
         <option value="PS512">PS512</option>
-        <option value="ES256">ES256</option>
+        {/* <option value="ES256">ES256</option>
         <option value="ES384">ES384</option>
-        <option value="ES512">ES512</option>
+        <option value="ES512">ES512</option> */}
       </select>
       <textarea
         value={yamlData}
@@ -135,15 +153,15 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
         className="w-full mt-4 p-2 border border-gray-300 rounded h-28"
       />
 
-      <label className="flex items-center mt-4">
+      {/* <label className="flex items-center mt-4">
         <input
           type="checkbox"
           checked={keyBinding}
           onChange={() => setKeyBinding(!keyBinding)}
           className="mr-2"
         />
-        <span>Require Key Binding (Holder's Public Key)</span>
-      </label>
+        <span>Require Key Binding</span>
+      </label> */}
     </div>
   );
 };

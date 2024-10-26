@@ -1,27 +1,55 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import * as wasm from "sdjwt";
 import Tooltip from "./Tooltip";
 import ColorCodedSdJwt from "./ColorCodedSdJwt";
+import { generateRSAPSSKeyPair } from "../utils";
 
 interface HolderFormProps {
   sdJwt: string;
   issuerPublicKey: string;
   setHolderSdJwt: (sdJwt: string) => void;
+  setKbKey: (key: string) => void;
+}
+
+type HashAlgorithm = "sha-256" | "sha-384" | "sha-512";
+
+interface Disclosure {
+  disclosure: string;
+  digest: string;
+  key?: string;
+  value: any;
+  salt_len: number;
+  algorithm: HashAlgorithm;
+}
+
+interface DisclosurePath {
+  path: string;
+  disclosure: Disclosure;
 }
 
 const HolderForm: React.FC<HolderFormProps> = ({
   sdJwt,
   issuerPublicKey,
   setHolderSdJwt,
+  setKbKey,
 }) => {
   const [holderPrivateKey, setHolderPrivateKey] = useState<string>("");
   const [holderPublicKey, setHolderPublicKey] = useState<string>("");
   const [verified, setVerified] = useState<boolean>(false);
+  const [disclosurePaths, setDisclosurePaths] = useState<DisclosurePath[]>([]);
   const [decodedJwt, setDecodedJwt] = useState<any>(null);
   const [digests, setDigests] = useState<string[]>([]);
   const [redactedDigests, setRedactedDigests] = useState<boolean[]>([]);
+
+  useEffect(() => {
+    generateRSAPSSKeyPair("SHA-256").then(({ publicKey, privateKey }) => {
+      setHolderPublicKey(publicKey);
+      setHolderPrivateKey(privateKey);
+      setKbKey(publicKey);
+    });
+  }, []);
 
   useEffect(() => {
     if (sdJwt && issuerPublicKey) {
@@ -44,12 +72,35 @@ const HolderForm: React.FC<HolderFormProps> = ({
       };
       decodeJwt(sdJwt);
       verifyIssuerSignature(alg);
+      createPresentation();
     } else {
       setDecodedJwt(null);
       setDigests([]);
       setRedactedDigests([]);
     }
   }, [sdJwt, issuerPublicKey]);
+
+  useEffect(() => {
+    createPresentation();
+  }, [redactedDigests]);
+
+  const createPresentation = () => {
+    const redactedDigestsVector = disclosurePaths
+      .filter((_, index) => redactedDigests[index])
+      .map((dp: DisclosurePath) => dp.path);
+    console.log("Redacted Digests Vector:", redactedDigestsVector);
+    try {
+      let presentation_builder = new wasm.SdJwtHolder();
+      let presentation_sd_jwt = presentation_builder.presentation(
+        sdJwt,
+        redactedDigestsVector
+      );
+      console.log("Presentation SD-JWT:", presentation_sd_jwt);
+      setHolderSdJwt(presentation_sd_jwt);
+    } catch (error) {
+      console.error("Error creating presentation:", error);
+    }
+  };
 
   const decodeBase64 = (digest: string) => {
     try {
@@ -67,7 +118,7 @@ const HolderForm: React.FC<HolderFormProps> = ({
   };
 
   const renderJson = (jsonObject: any, indentLevel: number = 0) => {
-    const indentStyle = { paddingLeft: `${indentLevel * 20}px` }; // Set indent level
+    const indentStyle = { paddingLeft: `${indentLevel * 20}px` };
 
     if (Array.isArray(jsonObject)) {
       // If it's an array, format it
@@ -116,15 +167,13 @@ const HolderForm: React.FC<HolderFormProps> = ({
   const verifyIssuerSignature = (alg: string) => {
     let holderJwt = new wasm.SdJwtHolder();
     try {
-      console.log("issuing public key", issuerPublicKey);
-      console.log("detected algorithm", alg);
-      console.log("sdJwt", sdJwt);
       const result = holderJwt.verify(sdJwt, issuerPublicKey, alg);
-      console.log("Verification result:", result);
+      console.log("Signature verification result:", result);
       setVerified(result);
+      setDisclosurePaths(result.disclosure_paths);
     } catch (error) {
-      console.error("Verification error:", error);
       setVerified(false);
+      setDisclosurePaths([]);
     }
   };
 
@@ -132,9 +181,13 @@ const HolderForm: React.FC<HolderFormProps> = ({
     <div className="bg-white shadow-lg rounded-lg p-8">
       <h2 className="text-2xl mb-4">Holder Panel</h2>
 
-      {verified && (
+      {verified ? (
         <div className="mt-4 text-green-600">
           <p>Signature Verified</p>
+        </div>
+      ) : (
+        <div className="mt-4 text-red-600">
+          <p>Signature Not Verified</p>
         </div>
       )}
 
@@ -159,7 +212,7 @@ const HolderForm: React.FC<HolderFormProps> = ({
 
       <div className="bg-gray-100 p-4 rounded-lg mb-4">
         <h3 className="text-l font-bold mb-2">Digests</h3>
-        {digests.map((digest, index) => (
+        {disclosurePaths.map((dp, index) => (
           <div
             key={index}
             className={`p-2 border-b border-gray-300 flex items-start justify-between ${
@@ -167,14 +220,20 @@ const HolderForm: React.FC<HolderFormProps> = ({
             }`}
           >
             <div className="flex-1 mr-4">
-              {/* Base64 Encoded Digest */}
+              {/* Base64 Encoded Dosclosure */}
               <div className="text-sm text-gray-600 break-all">
-                <strong>Base64:</strong> {digest || "N/A"}
+                <strong>Base64:</strong> {dp.disclosure.disclosure || "N/A"}
               </div>
 
-              {/* Decoded Digest */}
+              {/* Decoded zdisclosure */}
               <div className="text-sm text-gray-800 break-all">
-                <strong>Decoded:</strong> {decodeBase64(digest) || "N/A"}
+                <strong>Decoded:</strong>{" "}
+                {decodeBase64(dp.disclosure.disclosure) || "N/A"}
+              </div>
+
+              {/* DDisclosure Path */}
+              <div className="text-sm text-gray-800 break-all">
+                <strong>Path:</strong> {dp.path || "N/A"}
               </div>
             </div>
 
