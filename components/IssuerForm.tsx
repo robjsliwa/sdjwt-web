@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import * as wasm from "sdjwt";
 import { generateRSAPSSKeyPair, generateECDSAKeyPair } from "../utils";
 
@@ -79,6 +79,7 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
         setIssuerPublicKey(publicKey);
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [algorithm]);
 
   useEffect(() => {
@@ -103,10 +104,12 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
         }
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yamlData, privateKey]);
 
   useEffect(() => {
     setIssuerPublicKey(publicKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publicKey]);
 
   return (

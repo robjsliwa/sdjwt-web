@@ -30,7 +30,10 @@ export default function Home() {
             setHolderSdJwt={setHolderSdJwt}
             setKbKey={setKbKey}
           />
-          <VerifierForm holderSdJwt={holderSdJwt} />
+          <VerifierForm
+            holderSdJwt={holderSdJwt}
+            issuerPublicKey={issuerPublicKey}
+          />
         </div>
       </main>
     </div>

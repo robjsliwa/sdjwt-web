@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import * as wasm from "sdjwt";
-import Tooltip from "./Tooltip";
 import ColorCodedSdJwt from "./ColorCodedSdJwt";
 import { generateRSAPSSKeyPair } from "../utils";
+import renderJson from "./RenderJson";
 
 interface HolderFormProps {
   sdJwt: string;
@@ -19,7 +19,7 @@ interface Disclosure {
   disclosure: string;
   digest: string;
   key?: string;
-  value: any;
+  value: unknown;
   salt_len: number;
   algorithm: HashAlgorithm;
 }
@@ -39,8 +39,9 @@ const HolderForm: React.FC<HolderFormProps> = ({
   const [holderPublicKey, setHolderPublicKey] = useState<string>("");
   const [verified, setVerified] = useState<boolean>(false);
   const [disclosurePaths, setDisclosurePaths] = useState<DisclosurePath[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [decodedJwt, setDecodedJwt] = useState<any>(null);
-  const [digests, setDigests] = useState<string[]>([]);
+  const [, setDigests] = useState<string[]>([]);
   const [redactedDigests, setRedactedDigests] = useState<boolean[]>([]);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ const HolderForm: React.FC<HolderFormProps> = ({
       setHolderPrivateKey(privateKey);
       setKbKey(publicKey);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -78,26 +80,28 @@ const HolderForm: React.FC<HolderFormProps> = ({
       setDigests([]);
       setRedactedDigests([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sdJwt, issuerPublicKey]);
 
   useEffect(() => {
     createPresentation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [redactedDigests]);
 
   const createPresentation = () => {
+    if (!sdJwt) return;
     const redactedDigestsVector = disclosurePaths
       .filter((_, index) => redactedDigests[index])
       .map((dp: DisclosurePath) => dp.path);
-    console.log("Redacted Digests Vector:", redactedDigestsVector);
     try {
-      let presentation_builder = new wasm.SdJwtHolder();
-      let presentation_sd_jwt = presentation_builder.presentation(
+      const presentation_builder = new wasm.SdJwtHolder();
+      const presentation_sd_jwt = presentation_builder.presentation(
         sdJwt,
         redactedDigestsVector
       );
-      console.log("Presentation SD-JWT:", presentation_sd_jwt);
       setHolderSdJwt(presentation_sd_jwt);
     } catch (error) {
+      // TODO: display error to user
       console.error("Error creating presentation:", error);
     }
   };
@@ -117,61 +121,13 @@ const HolderForm: React.FC<HolderFormProps> = ({
     setRedactedDigests(newRedactedDigests);
   };
 
-  const renderJson = (jsonObject: any, indentLevel: number = 0) => {
-    const indentStyle = { paddingLeft: `${indentLevel * 20}px` };
-
-    if (Array.isArray(jsonObject)) {
-      // If it's an array, format it
-      return (
-        <span style={indentStyle}>
-          [
-          {jsonObject.map((item, index) => (
-            <span key={index}>
-              {renderJson(item, indentLevel + 1)}
-              {index < jsonObject.length - 1 ? ", " : ""}
-            </span>
-          ))}
-          ]
-        </span>
-      );
-    } else if (typeof jsonObject === "object" && jsonObject !== null) {
-      // If it's an object, format it with keys
-      return (
-        <span style={indentStyle}>
-          {"{"}
-          {Object.keys(jsonObject).map((key, index) => (
-            <span
-              key={index}
-              style={{
-                display: "block",
-                paddingLeft: `${(indentLevel + 1) * 20}px`,
-              }}
-            >
-              <strong>{key}</strong>:{" "}
-              {renderJson(jsonObject[key], indentLevel + 1)}
-              {index < Object.keys(jsonObject).length - 1 ? "," : ""}
-            </span>
-          ))}
-          {"}"}
-        </span>
-      );
-    } else {
-      return (
-        <Tooltip value={String(jsonObject)}>
-          <span>{String(jsonObject)}</span>
-        </Tooltip>
-      );
-    }
-  };
-
   const verifyIssuerSignature = (alg: string) => {
-    let holderJwt = new wasm.SdJwtHolder();
+    const holderJwt = new wasm.SdJwtHolder();
     try {
       const result = holderJwt.verify(sdJwt, issuerPublicKey, alg);
-      console.log("Signature verification result:", result);
       setVerified(result);
       setDisclosurePaths(result.disclosure_paths);
-    } catch (error) {
+    } catch {
       setVerified(false);
       setDisclosurePaths([]);
     }
@@ -191,11 +147,13 @@ const HolderForm: React.FC<HolderFormProps> = ({
         </div>
       )}
 
-      <ColorCodedSdJwt sdJwt={sdJwt} />
+      <ColorCodedSdJwt sdJwt={sdJwt} title="Issuer's SD-JWT" />
 
       {decodedJwt && (
         <div className="bg-gray-100 p-4 rounded-lg mb-4">
-          <h3 className="text-l font-bold mb-2">Decoded Issuer's SD-JWT</h3>
+          <h3 className="text-l font-bold mb-2">
+            Decoded Issuer&apos;s SD-JWT
+          </h3>
           <div className="overflow-x-auto break-words">
             <pre className="whitespace-pre-wrap">
               <code className="text-red-500">
@@ -225,7 +183,7 @@ const HolderForm: React.FC<HolderFormProps> = ({
                 <strong>Base64:</strong> {dp.disclosure.disclosure || "N/A"}
               </div>
 
-              {/* Decoded zdisclosure */}
+              {/* Decoded disclosure */}
               <div className="text-sm text-gray-800 break-all">
                 <strong>Decoded:</strong>{" "}
                 {decodeBase64(dp.disclosure.disclosure) || "N/A"}

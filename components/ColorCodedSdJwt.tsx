@@ -10,7 +10,10 @@ const sectionColors = {
   ],
 };
 
-const ColorCodedSdJwt: React.FC<{ sdJwt: string }> = ({ sdJwt }) => {
+const ColorCodedSdJwt: React.FC<{ sdJwt: string; title: string }> = ({
+  sdJwt,
+  title,
+}) => {
   const [header, payload, signature, ...digests] = sdJwt
     .split("~")
     .join(".")
@@ -18,7 +21,7 @@ const ColorCodedSdJwt: React.FC<{ sdJwt: string }> = ({ sdJwt }) => {
 
   return (
     <div className="bg-gray-100 p-4 rounded-lg mb-4">
-      <h3 className="text-l font-bold mb-2">Issuer's SD-JWT</h3>
+      <h3 className="text-l font-bold mb-2">{title}</h3>
       <div className="break-all">
         {/* Header */}
         <span className={sectionColors.header}>{header}</span>
