@@ -42,6 +42,7 @@ nationalities:
 const IssuerForm: React.FC<IssuerFormProps> = ({
   setSdJwt,
   setIssuerPublicKey,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   kbKey,
 }) => {
   const [yamlData, setYamlData] = useState<string>(sampleSDClaims);
@@ -50,6 +51,7 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
   const [algorithm, setAlgorithm] = useState<string>("RS256");
   const [yamlError, setYamlError] = useState<boolean>(false);
   const [keyError, setKeyError] = useState<boolean>(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [keyBinding, setKeyBinding] = useState<boolean>(false);
 
   useEffect(() => {
