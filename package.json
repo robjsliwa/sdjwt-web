@@ -5,14 +5,14 @@
   "scripts": {
     "dev": "next dev -p 4000",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 4001",
     "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.0.0",
     "react": "^18",
     "react-dom": "^18",
-    "sdjwt": "file:./pkg"
+    "sdjwt": "file:pkg"
   },
   "devDependencies": {
     "@types/node": "^20",

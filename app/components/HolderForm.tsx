@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import * as wasm from "sdjwt";
+// import * as wasm from "sdjwt";
 import ColorCodedSdJwt from "./ColorCodedSdJwt";
 import { generateRSAPSSKeyPair } from "../utils";
 import renderJson from "./RenderJson";
@@ -43,6 +43,14 @@ const HolderForm: React.FC<HolderFormProps> = ({
   const [decodedJwt, setDecodedJwt] = useState<any>(null);
   const [, setDigests] = useState<string[]>([]);
   const [redactedDigests, setRedactedDigests] = useState<boolean[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [wasm, setWasm] = useState<any>(null);
+
+  useEffect(() => {
+    import("sdjwt").then((module) => {
+      setWasm(module);
+    });
+  }, []);
 
   useEffect(() => {
     generateRSAPSSKeyPair("SHA-256").then(({ publicKey, privateKey }) => {
@@ -89,6 +97,7 @@ const HolderForm: React.FC<HolderFormProps> = ({
   }, [redactedDigests]);
 
   const createPresentation = () => {
+    if (!wasm) return;
     if (!sdJwt) return;
     const redactedDigestsVector = disclosurePaths
       .filter((_, index) => redactedDigests[index])
@@ -122,6 +131,7 @@ const HolderForm: React.FC<HolderFormProps> = ({
   };
 
   const verifyIssuerSignature = (alg: string) => {
+    if (!wasm) return;
     const holderJwt = new wasm.SdJwtHolder();
     try {
       const result = holderJwt.verify(sdJwt, issuerPublicKey, alg);

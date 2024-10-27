@@ -1,7 +1,9 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import ColorCodedSdJwt from "./ColorCodedSdJwt";
 import renderJson from "./RenderJson";
-import * as wasm from "sdjwt";
+// import * as wasm from "sdjwt";
 import { JSONValue, convertToJSON } from "../types";
 
 type VerifiedSdJwt = {
@@ -20,8 +22,17 @@ const VerifierForm: React.FC<VerifierFormProps> = ({
 }) => {
   const [decodedSdJwt, setDecodedSdJwt] = useState<VerifiedSdJwt | null>(null);
   const [verified, setVerified] = useState<boolean>(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [wasm, setWasm] = useState<any>(null);
 
   useEffect(() => {
+    import("sdjwt").then((module) => {
+      setWasm(module);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!wasm) return;
     const parts = holderSdJwt.split(".");
     if (parts.length === 3) {
       const header = JSON.parse(atob(parts[0]));
@@ -39,6 +50,7 @@ const VerifierForm: React.FC<VerifierFormProps> = ({
         setVerified(false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holderSdJwt, issuerPublicKey]);
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import * as wasm from "sdjwt";
+// import * as wasm from "sdjwt";
 import { generateRSAPSSKeyPair, generateECDSAKeyPair } from "../utils";
 
 interface IssuerFormProps {
@@ -53,6 +53,14 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
   const [keyError, setKeyError] = useState<boolean>(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [keyBinding, setKeyBinding] = useState<boolean>(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [wasm, setWasm] = useState<any>(null);
+
+  useEffect(() => {
+    import("sdjwt").then((module) => {
+      setWasm(module);
+    });
+  }, []);
 
   useEffect(() => {
     const shaCurveName = alg2sha_curve_mapping[algorithm];
@@ -85,7 +93,7 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
   }, [algorithm]);
 
   useEffect(() => {
-    if (privateKey && yamlData) {
+    if (wasm && privateKey && yamlData) {
       const issuer = new wasm.SdJwtIssuer();
       try {
         const jwt = issuer.encode(yamlData, privateKey, algorithm);

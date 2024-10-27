@@ -1,8 +1,8 @@
 "use client"; // Ensure this page is client-side
 
-import IssuerForm from "../components/IssuerForm";
-import HolderForm from "../components/HolderForm";
-import VerifierForm from "../components/VerifierForm";
+import IssuerForm from "./components/IssuerForm";
+import HolderForm from "./components/HolderForm";
+import VerifierForm from "./components/VerifierForm";
 import { useState } from "react";
 
 export default function Home() {
