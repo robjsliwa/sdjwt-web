@@ -89,7 +89,7 @@ const HolderForm: React.FC<HolderFormProps> = ({
       setRedactedDigests([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sdJwt, issuerPublicKey]);
+  }, [sdJwt, issuerPublicKey, wasm]);
 
   useEffect(() => {
     createPresentation();

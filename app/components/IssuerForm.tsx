@@ -114,8 +114,9 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
         }
       }
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yamlData, privateKey]);
+  }, [yamlData, privateKey, wasm]);
 
   useEffect(() => {
     setIssuerPublicKey(publicKey);

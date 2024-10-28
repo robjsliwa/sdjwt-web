@@ -51,7 +51,7 @@ const VerifierForm: React.FC<VerifierFormProps> = ({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [holderSdJwt, issuerPublicKey]);
+  }, [holderSdJwt, issuerPublicKey, wasm]);
 
   return (
     <div className="bg-white shadow-lg rounded-lg p-8">
