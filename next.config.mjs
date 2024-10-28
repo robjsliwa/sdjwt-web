@@ -7,6 +7,11 @@ const nextConfig = {
       layers: true,
     };
 
+    // config.module.rules.push({
+    //   test: /\.wasm$/,
+    //   type: "asset/resource",
+    // });
+
     return config;
   },
 };
