@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import ColorCodedSdJwt from "./ColorCodedSdJwt";
 import renderJson from "./RenderJson";
-// import * as wasm from "sdjwt";
 import { JSONValue, convertToJSON } from "../types";
 
 type VerifiedSdJwt = {
@@ -26,31 +25,39 @@ const VerifierForm: React.FC<VerifierFormProps> = ({
   const [wasm, setWasm] = useState<any>(null);
 
   useEffect(() => {
-    import("sdjwt").then((module) => {
-      setWasm(module);
-    });
+    import("sdjwt").then(setWasm);
   }, []);
 
   useEffect(() => {
-    if (!wasm) return;
-    const parts = holderSdJwt.split(".");
-    if (parts.length === 3) {
-      const header = JSON.parse(atob(parts[0]));
-      const alg = header.alg;
-      const verifier = new wasm.SdJwtVerifier();
-      try {
-        const result: VerifiedSdJwt = verifier.verify(
-          holderSdJwt,
-          issuerPublicKey,
-          alg
-        );
-        setVerified(true);
-        setDecodedSdJwt(convertToJSON(result) as VerifiedSdJwt);
-      } catch {
-        setVerified(false);
-      }
+    if (!wasm || !holderSdJwt || !issuerPublicKey) {
+      setVerified(false);
+      setDecodedSdJwt(null);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    const parts = holderSdJwt.split(".");
+    if (parts.length !== 3) {
+      setVerified(false);
+      setDecodedSdJwt(null);
+      return;
+    }
+
+    const header = JSON.parse(atob(parts[0]));
+    const alg = header.alg;
+    const verifier = new wasm.SdJwtVerifier();
+
+    try {
+      const result: VerifiedSdJwt = verifier.verify(
+        holderSdJwt,
+        issuerPublicKey,
+        alg
+      );
+      setVerified(true);
+      setDecodedSdJwt(convertToJSON(result) as VerifiedSdJwt);
+    } catch {
+      setVerified(false);
+      setDecodedSdJwt(null);
+    }
   }, [holderSdJwt, issuerPublicKey, wasm]);
 
   return (

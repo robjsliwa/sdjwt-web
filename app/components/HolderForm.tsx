@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// import * as wasm from "sdjwt";
 import ColorCodedSdJwt from "./ColorCodedSdJwt";
 import { generateRSAPSSKeyPair } from "../utils";
 import renderJson from "./RenderJson";
@@ -97,8 +96,7 @@ const HolderForm: React.FC<HolderFormProps> = ({
   }, [redactedDigests]);
 
   const createPresentation = () => {
-    if (!wasm) return;
-    if (!sdJwt) return;
+    if (!wasm || !sdJwt) return;
     const redactedDigestsVector = disclosurePaths
       .filter((_, index) => redactedDigests[index])
       .map((dp: DisclosurePath) => dp.path);

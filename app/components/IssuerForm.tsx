@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// import * as wasm from "sdjwt";
 import { generateRSAPSSKeyPair, generateECDSAKeyPair } from "../utils";
 
 interface IssuerFormProps {
@@ -39,6 +38,24 @@ nationalities:
     - !sd US
     - !sd PL`;
 
+const useKeyPair = (algorithm: string) => {
+  const [keyPair, setKeyPair] = useState<{
+    publicKey: string;
+    privateKey: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const shaCurveName = alg2sha_curve_mapping[algorithm];
+    const generateKeyPair = algorithm.startsWith("ES")
+      ? generateECDSAKeyPair
+      : generateRSAPSSKeyPair;
+
+    generateKeyPair(shaCurveName).then(setKeyPair);
+  }, [algorithm]);
+
+  return keyPair;
+};
+
 const IssuerForm: React.FC<IssuerFormProps> = ({
   setSdJwt,
   setIssuerPublicKey,
@@ -46,51 +63,27 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
   kbKey,
 }) => {
   const [yamlData, setYamlData] = useState<string>(sampleSDClaims);
-  const [privateKey, setPrivateKey] = useState<string>("");
-  const [publicKey, setPublicKey] = useState<string>("");
   const [algorithm, setAlgorithm] = useState<string>("RS256");
   const [yamlError, setYamlError] = useState<boolean>(false);
   const [keyError, setKeyError] = useState<boolean>(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [keyBinding, setKeyBinding] = useState<boolean>(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [wasm, setWasm] = useState<any>(null);
 
+  const [userPrivateKey, setUserPrivateKey] = useState<string>("");
+  const [userPublicKey, setUserPublicKey] = useState<string>("");
+
+  const generatedKeyPair = useKeyPair(algorithm);
+
+  const privateKey = userPrivateKey || generatedKeyPair?.privateKey || "";
+  const publicKey = userPublicKey || generatedKeyPair?.publicKey || "";
+
   useEffect(() => {
-    import("sdjwt").then((module) => {
-      setWasm(module);
-    });
+    import("sdjwt").then(setWasm);
   }, []);
 
   useEffect(() => {
-    const shaCurveName = alg2sha_curve_mapping[algorithm];
-    if (
-      algorithm === "ES256" ||
-      algorithm === "ES384" ||
-      algorithm === "ES512"
-    ) {
-      generateECDSAKeyPair(shaCurveName).then(
-        ({
-          publicKey,
-          privateKey,
-        }: {
-          publicKey: string;
-          privateKey: string;
-        }) => {
-          setPublicKey(publicKey);
-          setPrivateKey(privateKey);
-          setIssuerPublicKey(publicKey);
-        }
-      );
-    } else {
-      generateRSAPSSKeyPair(shaCurveName).then(({ publicKey, privateKey }) => {
-        setPublicKey(publicKey);
-        setPrivateKey(privateKey);
-        setIssuerPublicKey(publicKey);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [algorithm]);
+    if (publicKey) setIssuerPublicKey(publicKey);
+  }, [publicKey, setIssuerPublicKey]);
 
   useEffect(() => {
     if (wasm && privateKey && yamlData) {
@@ -101,27 +94,13 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
         setYamlError(false);
         setKeyError(false);
       } catch (error) {
-        if (String(error).includes("YAML parsing error")) {
-          setSdJwt("");
-          setYamlError(true);
-          setKeyError(false);
-        } else if (String(error).includes("encoding key")) {
-          setSdJwt("");
-          setKeyError(true);
-          setYamlError(false);
-        } else {
-          console.error("Error encoding JWT:", error);
-        }
+        setSdJwt("");
+        setYamlError(String(error).includes("YAML parsing error"));
+        setKeyError(String(error).includes("encoding key"));
+        console.error("Error encoding JWT:", error);
       }
     }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yamlData, privateKey, wasm]);
-
-  useEffect(() => {
-    setIssuerPublicKey(publicKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publicKey]);
+  }, [wasm, yamlData, privateKey, algorithm, setSdJwt]);
 
   return (
     <div className="bg-white shadow-lg rounded-lg p-8">
@@ -153,29 +132,19 @@ const IssuerForm: React.FC<IssuerFormProps> = ({
         } rounded`}
       />
       <textarea
-        value={privateKey}
-        onChange={(e) => setPrivateKey(e.target.value)}
+        value={userPrivateKey || privateKey}
+        onChange={(e) => setUserPrivateKey(e.target.value)}
         placeholder="Issuer Private Key (PEM format)"
         className={`w-full mt-4 p-2 border ${
           keyError ? "text-red-500" : ""
         } rounded h-28`}
       />
       <textarea
-        value={publicKey}
-        onChange={(e) => setPublicKey(e.target.value)}
+        value={userPublicKey || publicKey}
+        onChange={(e) => setUserPublicKey(e.target.value)}
         placeholder="Issuer Public Key (PEM format)"
         className="w-full mt-4 p-2 border border-gray-300 rounded h-28"
       />
-
-      {/* <label className="flex items-center mt-4">
-        <input
-          type="checkbox"
-          checked={keyBinding}
-          onChange={() => setKeyBinding(!keyBinding)}
-          className="mr-2"
-        />
-        <span>Require Key Binding</span>
-      </label> */}
     </div>
   );
 };
